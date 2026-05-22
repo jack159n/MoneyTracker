@@ -1,5 +1,7 @@
 node_modules/
 dist/
 .chrome-profile*/
+.env
+.env.local
 *.log
 *-check*.png

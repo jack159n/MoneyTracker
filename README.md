@@ -7,7 +7,7 @@ A small shared expense tracker for two people, built as a mobile-first PWA demo.
 - Add expenses with date, category, payer, and split members
 - Monthly summary
 - Simple settlement calculation
-- Local browser storage for demo use
+- Supabase login and shared cloud storage
 - CSV export
 - PWA manifest and service worker shell
 
@@ -23,10 +23,6 @@ The included Windows helper starts Vite on the local network:
 ```powershell
 .\start-dev.cmd
 ```
-
-## Next Step
-
-Replace `localStorage` with Supabase tables for shared cloud sync.
 
 ## Supabase Setup
 
@@ -50,3 +46,7 @@ VITE_SUPABASE_ANON_KEY=...
 ```
 
 Only users listed in `members` can read or write ledger data. Other signed-in users will see a locked screen.
+
+## Deployment
+
+See `docs/deploy.md` for the full Supabase + Vercel setup.

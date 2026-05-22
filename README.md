@@ -1,15 +1,38 @@
 # Our Ledger
 
-A small shared expense tracker for two people, built as a mobile-first PWA demo.
+Mobile-first shared expense tracker for Jay and Ling.
+
+Production:
+
+```text
+https://moneytrackerprivate.vercel.app/
+```
+
+Architecture:
+
+```text
+iPhone Safari / PWA -> Vercel frontend -> Supabase Auth + Postgres
+```
 
 ## Features
 
-- Add expenses with date, category, and payer
-- Monthly summary
-- Payer and category summaries
-- Supabase email/password login and shared cloud storage
-- CSV export
-- PWA manifest and service worker shell
+- Email/password login for existing Supabase users
+- Private ledger access through Supabase RLS and `members`
+- Add expenses with date, category, payer, amount, and note
+- Payer options: `Jay`, `Ling`, `Jay&Ling`
+- Monthly summary and payer totals
+- Selectable pie charts:
+  - Total category breakdown
+  - Payer breakdown
+  - Jay category breakdown
+  - Ling category breakdown
+  - Jay&Ling category breakdown
+- Detail filters:
+  - User: all, Jay, Ling, Jay&Ling
+  - Category: all plus configured categories
+  - Date: this month, this week, last week, specific day
+- CSV export for the currently filtered detail list
+- PWA manifest and service worker
 
 ## Development
 
@@ -18,35 +41,93 @@ npm install
 npm run dev
 ```
 
-The included Windows helper starts Vite on the local network:
+Windows helper:
 
 ```powershell
 .\start-dev.cmd
 ```
 
-## Supabase Setup
+Local URLs:
 
-1. Create a Supabase project.
-2. In Supabase SQL Editor, run `supabase/schema.sql`.
-3. Enable Email Auth in Supabase Authentication.
-4. Create both user accounts in Supabase Auth.
-5. In Supabase Auth > Users, copy both user IDs.
-6. Insert one couple and two `members` rows using the commented setup block at the bottom of `supabase/schema.sql`.
-7. Create `.env.local` from `.env.example`:
+```text
+http://127.0.0.1:5175
+http://192.168.168.164:5175
+```
+
+Build before pushing:
+
+```powershell
+npm run build
+```
+
+## Environment
+
+Create `.env.local` from `.env.example`:
 
 ```powershell
 Copy-Item .env.example .env.local
 ```
 
-Then fill in:
+Required values:
 
 ```text
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_ANON_PUBLIC_KEY
 ```
 
-Only users listed in `members` can read or write ledger data. Other signed-in users will see a locked screen.
+Do not commit `.env.local`, database passwords, or Supabase service role keys.
+
+## Supabase
+
+Run:
+
+```text
+supabase/schema.sql
+```
+
+If updating an existing database, make sure this migration has been applied:
+
+```sql
+alter table public.expenses
+add column if not exists payer_label text;
+```
+
+Access model:
+
+- Both users must exist in Supabase Auth.
+- Both Auth user IDs must be inserted into `public.members`.
+- Public signup can stay disabled.
+- Non-member users may authenticate, but RLS prevents reading or writing ledger data.
+
+Seed helper:
+
+```text
+supabase/seed-members.example.sql
+```
 
 ## Deployment
 
-See `docs/deploy.md` for the full Supabase + Vercel setup.
+Vercel deploys automatically from GitHub `main`.
+
+Required Vercel environment variables:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
+
+After changing Vercel environment variables, redeploy.
+
+See:
+
+```text
+docs/deploy.md
+```
+
+## Maintenance Notes
+
+- The app is designed primarily for iPhone 15 Pro Safari.
+- Keep the first screen functional and compact; avoid marketing-style landing sections.
+- PWA service worker uses a network-first cache strategy to avoid stale blank pages after deploys.
+- Pie/donut charts must handle a single nonzero slice as a visible 100% circle.
+- Use the local `svg-pie-chart` skill for chart work.

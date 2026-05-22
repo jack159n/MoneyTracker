@@ -98,20 +98,24 @@ function CategoryPieChart({ slices, total }) {
       <div className="chart-layout">
         <div className="pie-wrap" aria-label={text.categoryChart}>
           <svg viewBox="0 0 120 120" role="img">
-            {slices.map((slice) => {
-              const startAngle = angle;
-              const endAngle = angle + slice.percent * 360;
-              angle = endAngle;
-              return (
-                <path
-                  key={slice.category}
-                  d={describeArc(60, 54, startAngle, endAngle)}
-                  fill={slice.color}
-                  stroke="#fffaf0"
-                  strokeWidth="1.6"
-                />
-              );
-            })}
+            {slices.length === 1 ? (
+              <circle cx="60" cy="60" r="54" fill={slices[0].color} />
+            ) : (
+              slices.map((slice) => {
+                const startAngle = angle;
+                const endAngle = angle + slice.percent * 360;
+                angle = endAngle;
+                return (
+                  <path
+                    key={slice.category}
+                    d={describeArc(60, 54, startAngle, endAngle)}
+                    fill={slice.color}
+                    stroke="#fffaf0"
+                    strokeWidth="1.6"
+                  />
+                );
+              })
+            )}
             <circle cx="60" cy="60" r="28" fill="#fffaf0" />
             <text x="60" y="57" textAnchor="middle" className="pie-total-label">
               Total

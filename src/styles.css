@@ -247,6 +247,27 @@ select:focus {
   flex-wrap: wrap;
 }
 
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.auth-tabs button {
+  min-height: 44px;
+  border: 1px solid #cfc4b3;
+  border-radius: 8px;
+  color: #17324d;
+  background: #fffaf0;
+  font-weight: 850;
+}
+
+.auth-tabs button.active {
+  border-color: #2b6f74;
+  color: #fff;
+  background: #2b6f74;
+}
+
 .loading-screen {
   min-height: 100vh;
   display: grid;

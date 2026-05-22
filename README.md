@@ -7,7 +7,7 @@ A small shared expense tracker for two people, built as a mobile-first PWA demo.
 - Add expenses with date, category, payer, and split members
 - Monthly summary
 - Simple settlement calculation
-- Supabase login and shared cloud storage
+- Supabase email/password login and shared cloud storage
 - CSV export
 - PWA manifest and service worker shell
 
@@ -28,8 +28,8 @@ The included Windows helper starts Vite on the local network:
 
 1. Create a Supabase project.
 2. In Supabase SQL Editor, run `supabase/schema.sql`.
-3. Enable Email Auth in Supabase Authentication.
-4. Sign in once with both emails from the app.
+3. Enable Email Auth and password signups in Supabase Authentication.
+4. Sign up once with both emails from the app.
 5. In Supabase Auth > Users, copy both user IDs.
 6. Insert one couple and two `members` rows using the commented setup block at the bottom of `supabase/schema.sql`.
 7. Create `.env.local` from `.env.example`:

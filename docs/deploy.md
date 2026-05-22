@@ -11,7 +11,7 @@ iPhone Safari / PWA -> Vercel frontend -> Supabase Auth + Postgres
 1. Create a Supabase project.
 2. Open SQL Editor.
 3. Run `supabase/schema.sql`.
-4. Go to Authentication > Providers and keep Email enabled.
+4. Go to Authentication > Providers and keep Email enabled with password signups.
 5. In Authentication > URL Configuration, add these redirect URLs:
 
 ```text
@@ -53,7 +53,7 @@ Open:
 http://127.0.0.1:5175
 ```
 
-Sign in once with both emails. Each account will initially see a locked screen with its user id.
+Sign up once with both emails. Each account will initially see a locked screen with its user id.
 
 ## 3. Allow Only Both Of You
 

@@ -1,0 +1,411 @@
+:root {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1d2430;
+  background: #f7f2e8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(247, 242, 232, 0.92), rgba(247, 242, 232, 1)),
+    url("https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1600&q=70");
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.top-panel {
+  min-height: 190px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 0 10px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #a64234;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  max-width: 9ch;
+  margin-bottom: 0;
+  font-size: clamp(3.2rem, 10vw, 5.8rem);
+  line-height: 0.9;
+  letter-spacing: 0;
+  color: #17324d;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.08rem;
+}
+
+.month-select {
+  width: min(42vw, 170px);
+}
+
+label,
+.month-select {
+  display: grid;
+  gap: 8px;
+  color: #5e6470;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #d7ccbb;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #202734;
+  background: rgba(255, 252, 246, 0.94);
+  outline: none;
+}
+
+input:focus,
+select:focus {
+  border-color: #2b6f74;
+  box-shadow: 0 0 0 3px rgba(43, 111, 116, 0.14);
+}
+
+.summary-grid,
+.person-strip,
+.two-columns {
+  display: grid;
+  gap: 12px;
+}
+
+.summary-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.metric,
+.person-card,
+.expense-form,
+.ledger-list,
+.backend-note {
+  border: 1px solid rgba(91, 78, 62, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 252, 246, 0.91);
+  box-shadow: 0 18px 48px rgba(40, 35, 28, 0.08);
+}
+
+.metric {
+  min-height: 126px;
+  display: grid;
+  align-content: space-between;
+  padding: 18px;
+}
+
+.metric.primary {
+  background: #17324d;
+  color: #fffaf0;
+}
+
+.metric span,
+.metric small,
+.person-card small,
+.expense-item small,
+.section-title span {
+  color: #76706a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.metric.primary span,
+.metric.primary small {
+  color: rgba(255, 250, 240, 0.74);
+}
+
+.metric strong {
+  font-size: clamp(1.34rem, 4vw, 2rem);
+  line-height: 1.08;
+}
+
+.person-strip {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 12px;
+}
+
+.person-card {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 82px;
+  padding: 14px;
+}
+
+.person-card > span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #2b6f74;
+  font-weight: 850;
+}
+
+.person-card:nth-child(2) > span {
+  background: #d75a4a;
+}
+
+.person-card div {
+  display: grid;
+  gap: 4px;
+}
+
+.expense-form,
+.ledger-list,
+.backend-note {
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.two-columns {
+  grid-template-columns: 1fr 1fr;
+}
+
+.expense-form {
+  display: grid;
+  gap: 14px;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  margin-bottom: 8px;
+  color: #5e6470;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-height: 46px;
+}
+
+.segmented button,
+.ghost-button,
+.submit-button,
+.expense-side button {
+  min-height: 44px;
+  border: 1px solid #cfc4b3;
+  border-radius: 8px;
+  color: #17324d;
+  background: #fffaf0;
+  font-weight: 850;
+}
+
+.segmented button.active {
+  border-color: #2b6f74;
+  color: #fff;
+  background: #2b6f74;
+}
+
+.submit-button {
+  min-height: 52px;
+  border: 0;
+  color: #fffaf0;
+  background: #a64234;
+}
+
+.ghost-button {
+  min-width: 78px;
+}
+
+.expense-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px 0;
+  border-top: 1px solid #eee4d5;
+}
+
+.expense-item:first-of-type {
+  border-top: 0;
+}
+
+.expense-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.expense-main div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.expense-main strong,
+.expense-main small {
+  overflow-wrap: anywhere;
+}
+
+.category {
+  flex: 0 0 auto;
+  min-width: 52px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  color: #17324d;
+  background: #e5efe9;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+.expense-side {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.expense-side button {
+  min-height: 34px;
+  padding: 0 10px;
+  color: #a64234;
+  font-size: 0.78rem;
+}
+
+.empty-state {
+  min-height: 90px;
+  display: grid;
+  place-items: center;
+  color: #76706a;
+  border-top: 1px solid #eee4d5;
+}
+
+.backend-note {
+  margin-bottom: 28px;
+  color: #fffaf0;
+  background: #17324d;
+}
+
+.schema-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 10px 14px;
+  margin-top: 12px;
+  font-size: 0.88rem;
+}
+
+code {
+  color: #17324d;
+  background: #fffaf0;
+  border-radius: 6px;
+  padding: 4px 7px;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 14px;
+  }
+
+  .top-panel {
+    min-height: 170px;
+  }
+
+  .summary-grid,
+  .person-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .person-card {
+    grid-template-columns: 54px 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    background-attachment: scroll;
+  }
+
+  .top-panel {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .month-select {
+    width: 100%;
+  }
+
+  .section-title {
+    flex-wrap: wrap;
+  }
+
+  .two-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .expense-item {
+    align-items: flex-start;
+  }
+
+  .expense-main {
+    align-items: flex-start;
+  }
+
+  .schema-grid {
+    grid-template-columns: 1fr;
+  }
+}

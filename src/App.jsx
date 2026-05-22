@@ -21,7 +21,10 @@ const text = {
   payerSummary: '\u4ed8\u6b3e\u4f86\u6e90',
   payerSummaryHint: '\u7d00\u9304\u9019\u500b\u6708\u7684\u82b1\u8cbb\u662f\u7531\u8ab0\u4ed8\u6b3e',
   categoryChart: '\u672c\u6708\u5206\u985e\u5713\u9905\u5716',
-  categoryChartEmpty: '\u6709\u65b0\u589e\u652f\u51fa\u5f8c\uff0c\u9019\u88e1\u6703\u986f\u793a\u5206\u985e\u6bd4\u4f8b\u3002',
+  chartTitle: '\u672c\u6708\u5716\u8868',
+  chartEmpty: '\u6709\u65b0\u589e\u652f\u51fa\u5f8c\uff0c\u9019\u88e1\u6703\u986f\u793a\u6bd4\u4f8b\u3002',
+  chartModeCategory: '\u5206\u985e',
+  chartModePayer: '\u4ed8\u6b3e\u4eba',
   paid: '\u5df2\u4ed8\u6b3e',
   addOne: '\u65b0\u589e\u4e00\u7b46',
   export: '\u532f\u51fa',
@@ -72,14 +75,53 @@ function describeArc(center, radius, startAngle, endAngle) {
   return `M ${center} ${center} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y} Z`;
 }
 
-function CategoryPieChart({ slices, total }) {
+function makeSlices(entries, total, palette = categoryColors) {
+  return entries
+    .map(([category, amount], index) => ({
+      category,
+      amount,
+      percent: total ? amount / total : 0,
+      color: palette[index % palette.length],
+    }))
+    .sort((first, second) => second.amount - first.amount);
+}
+
+function buildCategorySummary(expenses, filterPayerLabel) {
+  const totals = new Map();
+  expenses.forEach((expense) => {
+    const payerLabel = expense.payer_label || expense.payer?.display_name || jointPayerLabel;
+    if (filterPayerLabel && payerLabel !== filterPayerLabel) return;
+    totals.set(expense.category, (totals.get(expense.category) || 0) + Number(expense.amount));
+  });
+
+  const total = [...totals.values()].reduce((sum, amount) => sum + amount, 0);
+  return { total, slices: makeSlices([...totals.entries()], total) };
+}
+
+function PieChartBlock({ modes, activeMode, onModeChange }) {
+  const selectedMode = modes.find((mode) => mode.key === activeMode) || modes[0];
+  const slices = selectedMode?.slices || [];
+  const total = selectedMode?.total || 0;
+
   if (!slices.length) {
     return (
       <section className="chart-panel">
         <div className="section-title">
-          <h2>{text.categoryChart}</h2>
+          <h2>{text.chartTitle}</h2>
         </div>
-        <div className="empty-state">{text.categoryChartEmpty}</div>
+        <div className="chart-mode-scroll" aria-label={text.chartTitle}>
+          {modes.map((mode) => (
+            <button
+              className={mode.key === activeMode ? 'active' : ''}
+              type="button"
+              key={mode.key}
+              onClick={() => onModeChange(mode.key)}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+        <div className="empty-state">{text.chartEmpty}</div>
       </section>
     );
   }
@@ -89,11 +131,23 @@ function CategoryPieChart({ slices, total }) {
   return (
     <section className="chart-panel">
       <div className="section-title">
-        <h2>{text.categoryChart}</h2>
+        <h2>{text.chartTitle}</h2>
         <span>{money(total)}</span>
       </div>
+      <div className="chart-mode-scroll" aria-label={text.chartTitle}>
+        {modes.map((mode) => (
+          <button
+            className={mode.key === activeMode ? 'active' : ''}
+            type="button"
+            key={mode.key}
+            onClick={() => onModeChange(mode.key)}
+          >
+            {mode.label}
+          </button>
+        ))}
+      </div>
       <div className="chart-layout">
-        <div className="pie-wrap" aria-label={text.categoryChart}>
+        <div className="pie-wrap" aria-label={selectedMode.label}>
           <svg viewBox="0 0 120 120" role="img">
             {slices.length === 1 ? (
               <circle cx="60" cy="60" r="54" fill={slices[0].color} />
@@ -169,6 +223,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
   const [error, setError] = useState('');
+  const [chartMode, setChartMode] = useState('category');
   const [currentMember, setCurrentMember] = useState(null);
   const [members, setMembers] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -305,24 +360,25 @@ function App() {
     };
   }, [monthlyExpenses, payerOptions]);
 
-  const categorySummary = useMemo(() => {
-    const totals = new Map();
-    monthlyExpenses.forEach((expense) => {
-      totals.set(expense.category, (totals.get(expense.category) || 0) + Number(expense.amount));
-    });
+  const chartModes = useMemo(() => {
+    const categorySummary = buildCategorySummary(monthlyExpenses);
+    const payerEntries = summary.payerTotals.map((payerTotal) => [payerTotal.label, payerTotal.amount]);
+    const payerSummary = {
+      total: summary.total,
+      slices: makeSlices(payerEntries, summary.total, ['#2b6f74', '#d75a4a', '#17324d']),
+    };
+    const payerLabels = [...new Set([...payerOptions.map((option) => option.label), jointPayerLabel])];
 
-    const total = [...totals.values()].reduce((sum, amount) => sum + amount, 0);
-    const slices = [...totals.entries()]
-      .map(([category, amount]) => ({
-        category,
-        amount,
-        percent: total ? amount / total : 0,
-        color: categoryColors[categories.indexOf(category) >= 0 ? categories.indexOf(category) : categoryColors.length - 1],
-      }))
-      .sort((first, second) => second.amount - first.amount);
-
-    return { total, slices };
-  }, [monthlyExpenses]);
+    return [
+      { key: 'category', label: text.chartModeCategory, ...categorySummary },
+      { key: 'payer', label: text.chartModePayer, ...payerSummary },
+      ...payerLabels.map((label) => ({
+        key: `payer-${label}`,
+        label,
+        ...buildCategorySummary(monthlyExpenses, label),
+      })),
+    ];
+  }, [monthlyExpenses, payerOptions, summary.payerTotals, summary.total]);
 
   function updateForm(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -531,7 +587,7 @@ function App() {
         </div>
       </section>
 
-      <CategoryPieChart slices={categorySummary.slices} total={categorySummary.total} />
+      <PieChartBlock modes={chartModes} activeMode={chartMode} onModeChange={setChartMode} />
 
       <section className="person-strip">
         {summary.payerTotals.map((payerTotal, index) => (

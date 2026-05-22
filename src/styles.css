@@ -178,6 +178,36 @@ select:focus {
   padding: 16px;
 }
 
+.chart-mode-scroll {
+  display: flex;
+  gap: 8px;
+  margin: -2px 0 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.chart-mode-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.chart-mode-scroll button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  border: 1px solid #cfc4b3;
+  border-radius: 8px;
+  padding: 0 13px;
+  color: #17324d;
+  background: #fffaf0;
+  font-weight: 850;
+}
+
+.chart-mode-scroll button.active {
+  border-color: #2b6f74;
+  color: #fff;
+  background: #2b6f74;
+}
+
 .chart-layout {
   display: grid;
   grid-template-columns: minmax(180px, 240px) 1fr;
@@ -502,11 +532,16 @@ code {
 
 @media (max-width: 720px) {
   .app-shell {
-    padding: 14px;
+    padding: 12px;
   }
 
   .top-panel {
-    min-height: 170px;
+    min-height: 132px;
+    padding-top: 18px;
+  }
+
+  h1 {
+    font-size: clamp(2.8rem, 14vw, 4.2rem);
   }
 
   .summary-grid,
@@ -516,6 +551,11 @@ code {
 
   .chart-layout {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .pie-wrap {
+    max-width: 210px;
   }
 
   .person-card {
@@ -530,7 +570,7 @@ code {
 
   .top-panel {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
   }
 
   .top-actions {
@@ -545,6 +585,37 @@ code {
 
   .section-title {
     flex-wrap: wrap;
+  }
+
+  .summary-grid {
+    gap: 10px;
+  }
+
+  .metric {
+    min-height: 108px;
+    padding: 15px;
+  }
+
+  .person-strip {
+    gap: 9px;
+  }
+
+  .person-card {
+    min-height: 68px;
+    padding: 11px 12px;
+  }
+
+  .person-card > span {
+    height: 42px;
+    min-width: 42px;
+    padding: 0 10px;
+    font-size: 0.9rem;
+  }
+
+  .chart-panel,
+  .expense-form,
+  .ledger-list {
+    padding: 14px;
   }
 
   .two-columns {

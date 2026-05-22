@@ -10,6 +10,8 @@ const categories = [
   '\u5176\u4ed6',
 ];
 
+const categoryColors = ['#17324d', '#2b6f74', '#d75a4a', '#b9852f', '#6d597a', '#5e6470'];
+
 const text = {
   appKicker: '\u5169\u4eba\u5171\u540c\u8a18\u5e33',
   month: '\u6708\u4efd',
@@ -17,6 +19,8 @@ const text = {
   records: '\u7b46\u7d00\u9304',
   settlement: '\u7d50\u7b97',
   splitHint: '\u4f9d\u6bcf\u7b46\u5206\u64d4\u4eba\u6578\u5e73\u5747\u8a08\u7b97',
+  categoryChart: '\u672c\u6708\u5206\u985e\u5713\u9905\u5716',
+  categoryChartEmpty: '\u6709\u65b0\u589e\u652f\u51fa\u5f8c\uff0c\u9019\u88e1\u6703\u986f\u793a\u5206\u985e\u6bd4\u4f8b\u3002',
   paid: '\u5df2\u4ed8\u6b3e',
   share: '\u61c9\u5206\u64d4',
   addOne: '\u65b0\u589e\u4e00\u7b46',
@@ -55,6 +59,82 @@ const text = {
   splitLabel: '\u5206\u64d4',
   signedUp: '\u8a3b\u518a\u5b8c\u6210\uff0c\u5982\u679c Supabase \u8981\u6c42\u9a57\u8b49\u4fe1\u7bb1\uff0c\u8acb\u5148\u53bb\u4fe1\u7bb1\u9ede\u958b\u9a57\u8b49\u4fe1\u3002',
 };
+
+function polarToCartesian(center, radius, angleInDegrees) {
+  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
+  return {
+    x: center + radius * Math.cos(angleInRadians),
+    y: center + radius * Math.sin(angleInRadians),
+  };
+}
+
+function describeArc(center, radius, startAngle, endAngle) {
+  const start = polarToCartesian(center, radius, endAngle);
+  const end = polarToCartesian(center, radius, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+  return `M ${center} ${center} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y} Z`;
+}
+
+function CategoryPieChart({ slices, total }) {
+  if (!slices.length) {
+    return (
+      <section className="chart-panel">
+        <div className="section-title">
+          <h2>{text.categoryChart}</h2>
+        </div>
+        <div className="empty-state">{text.categoryChartEmpty}</div>
+      </section>
+    );
+  }
+
+  let angle = 0;
+
+  return (
+    <section className="chart-panel">
+      <div className="section-title">
+        <h2>{text.categoryChart}</h2>
+        <span>{money(total)}</span>
+      </div>
+      <div className="chart-layout">
+        <div className="pie-wrap" aria-label={text.categoryChart}>
+          <svg viewBox="0 0 120 120" role="img">
+            {slices.map((slice) => {
+              const startAngle = angle;
+              const endAngle = angle + slice.percent * 360;
+              angle = endAngle;
+              return (
+                <path
+                  key={slice.category}
+                  d={describeArc(60, 54, startAngle, endAngle)}
+                  fill={slice.color}
+                  stroke="#fffaf0"
+                  strokeWidth="1.6"
+                />
+              );
+            })}
+            <circle cx="60" cy="60" r="28" fill="#fffaf0" />
+            <text x="60" y="57" textAnchor="middle" className="pie-total-label">
+              Total
+            </text>
+            <text x="60" y="72" textAnchor="middle" className="pie-total-value">
+              {money(total)}
+            </text>
+          </svg>
+        </div>
+        <div className="chart-legend">
+          {slices.map((slice) => (
+            <div className="legend-row" key={slice.category}>
+              <span className="legend-dot" style={{ background: slice.color }} />
+              <strong>{slice.category}</strong>
+              <small>{Math.round(slice.percent * 100)}%</small>
+              <span>{money(slice.amount)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function money(value) {
   return new Intl.NumberFormat('zh-TW', {
@@ -234,6 +314,25 @@ function App() {
           : text.equal,
     };
   }, [members, monthlyExpenses]);
+
+  const categorySummary = useMemo(() => {
+    const totals = new Map();
+    monthlyExpenses.forEach((expense) => {
+      totals.set(expense.category, (totals.get(expense.category) || 0) + Number(expense.amount));
+    });
+
+    const total = [...totals.values()].reduce((sum, amount) => sum + amount, 0);
+    const slices = [...totals.entries()]
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percent: total ? amount / total : 0,
+        color: categoryColors[categories.indexOf(category) >= 0 ? categories.indexOf(category) : categoryColors.length - 1],
+      }))
+      .sort((first, second) => second.amount - first.amount);
+
+    return { total, slices };
+  }, [monthlyExpenses]);
 
   function updateForm(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -493,6 +592,8 @@ function App() {
           <small>{text.splitHint}</small>
         </div>
       </section>
+
+      <CategoryPieChart slices={categorySummary.slices} total={categorySummary.total} />
 
       <section className="person-strip">
         {members.map((member) => (

@@ -128,7 +128,8 @@ select:focus {
 .person-card,
 .expense-form,
 .ledger-list,
-.backend-note {
+.backend-note,
+.chart-panel {
   border: 1px solid rgba(91, 78, 62, 0.16);
   border-radius: 8px;
   background: rgba(255, 252, 246, 0.91);
@@ -170,6 +171,72 @@ select:focus {
 .person-strip {
   grid-template-columns: repeat(2, 1fr);
   margin-top: 12px;
+}
+
+.chart-panel {
+  margin-top: 12px;
+  padding: 16px;
+}
+
+.chart-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.pie-wrap {
+  width: min(100%, 240px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+
+.pie-wrap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pie-total-label {
+  fill: #76706a;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.pie-total-value {
+  fill: #17324d;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.chart-legend {
+  display: grid;
+  gap: 8px;
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: 12px minmax(56px, 1fr) 44px minmax(76px, max-content);
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+  color: #17324d;
+}
+
+.legend-row small {
+  color: #76706a;
+  font-weight: 800;
+}
+
+.legend-row > span:last-child {
+  justify-self: end;
+  font-weight: 850;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
 }
 
 .person-card {
@@ -459,6 +526,10 @@ code {
 
   .summary-grid,
   .person-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-layout {
     grid-template-columns: 1fr;
   }
 

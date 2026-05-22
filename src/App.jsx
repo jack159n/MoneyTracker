@@ -243,7 +243,7 @@ function App() {
     setExpenses((expenseRows || []).map(compactExpense));
     setForm((current) => ({
       ...current,
-      payer_key: current.payer_key || myMember.id,
+      payer_key: myMember.id,
     }));
     setAppLoading(false);
   }, []);
@@ -267,6 +267,7 @@ function App() {
         setCurrentMember(null);
         setMembers([]);
         setExpenses([]);
+        setForm((current) => ({ ...current, payer_key: '' }));
         setAppLoading(false);
       }
     });

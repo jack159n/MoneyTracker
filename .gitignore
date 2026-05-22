@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .chrome-profile*/
+.chrome-vercel*/
 .env
 .env.local
 *.log

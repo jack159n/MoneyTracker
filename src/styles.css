@@ -312,6 +312,13 @@ select:focus {
   padding: 16px;
 }
 
+.detail-filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -561,6 +568,10 @@ code {
   .person-card {
     grid-template-columns: minmax(70px, 0.8fr) 1fr;
   }
+
+  .detail-filters {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
@@ -620,6 +631,10 @@ code {
 
   .two-columns {
     grid-template-columns: 1fr;
+  }
+
+  .detail-filters {
+    gap: 8px;
   }
 
   .expense-item {

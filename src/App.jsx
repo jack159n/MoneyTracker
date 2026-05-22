@@ -23,8 +23,15 @@ const text = {
   categoryChart: '\u672c\u6708\u5206\u985e\u5713\u9905\u5716',
   chartTitle: '\u672c\u6708\u5716\u8868',
   chartEmpty: '\u6709\u65b0\u589e\u652f\u51fa\u5f8c\uff0c\u9019\u88e1\u6703\u986f\u793a\u6bd4\u4f8b\u3002',
-  chartModeCategory: '\u5206\u985e',
+  chartModeTotal: '\u7e3d\u984d',
   chartModePayer: '\u4ed8\u6b3e\u4eba',
+  all: '\u5168\u90e8',
+  user: 'User',
+  dateRange: '\u65e5\u671f',
+  thisMonth: '\u672c\u6708',
+  thisWeek: '\u672c\u9031',
+  lastWeek: '\u4e0a\u9031',
+  specificDay: '\u67d0\u65e5',
   paid: '\u5df2\u4ed8\u6b3e',
   addOne: '\u65b0\u589e\u4e00\u7b46',
   export: '\u532f\u51fa',
@@ -77,6 +84,7 @@ function describeArc(center, radius, startAngle, endAngle) {
 
 function makeSlices(entries, total, palette = categoryColors) {
   return entries
+    .filter(([, amount]) => Number(amount) > 0)
     .map(([category, amount], index) => ({
       category,
       amount,
@@ -96,6 +104,30 @@ function buildCategorySummary(expenses, filterPayerLabel) {
 
   const total = [...totals.values()].reduce((sum, amount) => sum + amount, 0);
   return { total, slices: makeSlices([...totals.entries()], total) };
+}
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function startOfDay(date) {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function addDays(date, days) {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
+function getWeekBounds(offsetWeeks = 0) {
+  const today = startOfDay(new Date());
+  const mondayOffset = (today.getDay() + 6) % 7;
+  const start = addDays(today, -mondayOffset + offsetWeeks * 7);
+  const end = addDays(start, 7);
+  return { start, end };
 }
 
 function PieChartBlock({ modes, activeMode, onModeChange }) {
@@ -224,6 +256,12 @@ function App() {
   const [appLoading, setAppLoading] = useState(true);
   const [error, setError] = useState('');
   const [chartMode, setChartMode] = useState('category');
+  const [detailFilters, setDetailFilters] = useState({
+    payer: 'all',
+    category: 'all',
+    dateRange: 'month',
+    day: todayString(),
+  });
   const [currentMember, setCurrentMember] = useState(null);
   const [members, setMembers] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -360,6 +398,24 @@ function App() {
     };
   }, [monthlyExpenses, payerOptions]);
 
+  const visibleDetailExpenses = useMemo(() => {
+    return monthlyExpenses.filter((expense) => {
+      const payerLabel = expense.payer_label || expense.payer?.display_name || jointPayerLabel;
+      if (detailFilters.payer !== 'all' && payerLabel !== detailFilters.payer) return false;
+      if (detailFilters.category !== 'all' && expense.category !== detailFilters.category) return false;
+
+      if (detailFilters.dateRange === 'day') return expense.date === detailFilters.day;
+
+      if (detailFilters.dateRange === 'week' || detailFilters.dateRange === 'last-week') {
+        const bounds = getWeekBounds(detailFilters.dateRange === 'week' ? 0 : -1);
+        const expenseDate = startOfDay(new Date(`${expense.date}T00:00:00`));
+        return expenseDate >= bounds.start && expenseDate < bounds.end;
+      }
+
+      return true;
+    });
+  }, [detailFilters, monthlyExpenses]);
+
   const chartModes = useMemo(() => {
     const categorySummary = buildCategorySummary(monthlyExpenses);
     const payerEntries = summary.payerTotals.map((payerTotal) => [payerTotal.label, payerTotal.amount]);
@@ -370,7 +426,7 @@ function App() {
     const payerLabels = [...new Set([...payerOptions.map((option) => option.label), jointPayerLabel])];
 
     return [
-      { key: 'category', label: text.chartModeCategory, ...categorySummary },
+      { key: 'category', label: text.chartModeTotal, ...categorySummary },
       { key: 'payer', label: text.chartModePayer, ...payerSummary },
       ...payerLabels.map((label) => ({
         key: `payer-${label}`,
@@ -382,6 +438,10 @@ function App() {
 
   function updateForm(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateDetailFilter(key, value) {
+    setDetailFilters((current) => ({ ...current, [key]: value }));
   }
 
   async function submitAuth(event) {
@@ -444,7 +504,7 @@ function App() {
   function exportCsv() {
     const rows = [
       ['date', 'title', 'amount', 'payer', 'category', 'note'],
-      ...monthlyExpenses.map((expense) => [
+      ...visibleDetailExpenses.map((expense) => [
         expense.date,
         expense.title,
         expense.amount,
@@ -669,14 +729,54 @@ function App() {
         <div className="section-title">
           <h2>{text.details}</h2>
           <span>
-            {monthlyExpenses.length} {text.records}
+            {visibleDetailExpenses.length} {text.records}
           </span>
         </div>
 
-        {monthlyExpenses.length === 0 ? (
+        <div className="detail-filters">
+          <label>
+            {text.user}
+            <select value={detailFilters.payer} onChange={(event) => updateDetailFilter('payer', event.target.value)}>
+              <option value="all">{text.all}</option>
+              {payerOptions.map((option) => (
+                <option key={option.label} value={option.label}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {text.category}
+            <select value={detailFilters.category} onChange={(event) => updateDetailFilter('category', event.target.value)}>
+              <option value="all">{text.all}</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {text.dateRange}
+            <select value={detailFilters.dateRange} onChange={(event) => updateDetailFilter('dateRange', event.target.value)}>
+              <option value="month">{text.thisMonth}</option>
+              <option value="week">{text.thisWeek}</option>
+              <option value="last-week">{text.lastWeek}</option>
+              <option value="day">{text.specificDay}</option>
+            </select>
+          </label>
+          {detailFilters.dateRange === 'day' ? (
+            <label>
+              {text.specificDay}
+              <input type="date" value={detailFilters.day} onChange={(event) => updateDetailFilter('day', event.target.value)} />
+            </label>
+          ) : null}
+        </div>
+
+        {visibleDetailExpenses.length === 0 ? (
           <div className="empty-state">{text.empty}</div>
         ) : (
-          monthlyExpenses.map((expense) => (
+          visibleDetailExpenses.map((expense) => (
             <article className="expense-item" key={expense.id}>
               <div className="expense-main">
                 <span className="category">{expense.category}</span>

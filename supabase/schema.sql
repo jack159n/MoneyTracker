@@ -20,6 +20,7 @@ create table if not exists public.expenses (
   id uuid primary key default gen_random_uuid(),
   couple_id uuid not null references public.couples(id) on delete cascade,
   payer_member_id uuid not null references public.members(id),
+  payer_label text,
   date date not null,
   title text not null,
   amount numeric(12, 2) not null check (amount > 0),
@@ -40,6 +41,9 @@ create index if not exists members_user_id_idx on public.members(user_id);
 create index if not exists members_couple_id_idx on public.members(couple_id);
 create index if not exists expenses_couple_date_idx on public.expenses(couple_id, date desc);
 create index if not exists expense_splits_member_id_idx on public.expense_splits(member_id);
+
+alter table public.expenses
+add column if not exists payer_label text;
 
 alter table public.couples enable row level security;
 alter table public.members enable row level security;

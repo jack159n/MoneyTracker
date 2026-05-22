@@ -241,7 +241,7 @@ select:focus {
 
 .person-card {
   display: grid;
-  grid-template-columns: 0.7fr 1fr 1fr;
+  grid-template-columns: minmax(70px, 0.8fr) 1fr;
   gap: 10px;
   align-items: center;
   min-height: 82px;
@@ -249,10 +249,12 @@ select:focus {
 }
 
 .person-card > span {
-  width: 48px;
+  min-width: 48px;
+  width: fit-content;
   height: 48px;
   display: grid;
   place-items: center;
+  padding: 0 12px;
   border-radius: 50%;
   color: #fff;
   background: #2b6f74;
@@ -261,6 +263,10 @@ select:focus {
 
 .person-card:nth-child(2) > span {
   background: #d75a4a;
+}
+
+.person-card:nth-child(3) > span {
+  background: #17324d;
 }
 
 .person-card div {
@@ -534,7 +540,7 @@ code {
   }
 
   .person-card {
-    grid-template-columns: 54px 1fr 1fr;
+    grid-template-columns: minmax(70px, 0.8fr) 1fr;
   }
 }
 

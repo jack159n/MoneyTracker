@@ -4,9 +4,9 @@ A small shared expense tracker for two people, built as a mobile-first PWA demo.
 
 ## Features
 
-- Add expenses with date, category, payer, and split members
+- Add expenses with date, category, and payer
 - Monthly summary
-- Simple settlement calculation
+- Payer and category summaries
 - Supabase email/password login and shared cloud storage
 - CSV export
 - PWA manifest and service worker shell

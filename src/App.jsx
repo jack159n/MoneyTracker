@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { hasSupabaseConfig, supabase } from './supabaseClient.js';
 
 const categories = [
@@ -11,18 +11,18 @@ const categories = [
 ];
 
 const categoryColors = ['#17324d', '#2b6f74', '#d75a4a', '#b9852f', '#6d597a', '#5e6470'];
+const jointPayerLabel = 'Jay&Ling';
 
 const text = {
   appKicker: '\u5169\u4eba\u5171\u540c\u8a18\u5e33',
   month: '\u6708\u4efd',
   total: '\u672c\u6708\u7e3d\u652f\u51fa',
   records: '\u7b46\u7d00\u9304',
-  settlement: '\u7d50\u7b97',
-  splitHint: '\u4f9d\u6bcf\u7b46\u5206\u64d4\u4eba\u6578\u5e73\u5747\u8a08\u7b97',
+  payerSummary: '\u4ed8\u6b3e\u4f86\u6e90',
+  payerSummaryHint: '\u7d00\u9304\u9019\u500b\u6708\u7684\u82b1\u8cbb\u662f\u7531\u8ab0\u4ed8\u6b3e',
   categoryChart: '\u672c\u6708\u5206\u985e\u5713\u9905\u5716',
   categoryChartEmpty: '\u6709\u65b0\u589e\u652f\u51fa\u5f8c\uff0c\u9019\u88e1\u6703\u986f\u793a\u5206\u985e\u6bd4\u4f8b\u3002',
   paid: '\u5df2\u4ed8\u6b3e',
-  share: '\u61c9\u5206\u64d4',
   addOne: '\u65b0\u589e\u4e00\u7b46',
   export: '\u532f\u51fa',
   title: '\u540d\u7a31',
@@ -31,7 +31,6 @@ const text = {
   date: '\u65e5\u671f',
   payer: '\u8ab0\u4ed8\u6b3e',
   category: '\u5206\u985e',
-  splitWith: '\u8ab0\u8981\u5206\u64d4',
   note: '\u5099\u8a3b',
   optional: '\u53ef\u4e0d\u586b',
   addExpense: '\u65b0\u589e\u652f\u51fa',
@@ -56,7 +55,6 @@ const text = {
   equal: '\u9019\u500b\u6708\u525b\u597d\u6253\u5e73',
   owedTo: '\u8981\u7d66',
   createdBy: '\u4ed8\u6b3e',
-  splitLabel: '\u5206\u64d4',
   signedUp: '\u8a3b\u518a\u5b8c\u6210\uff0c\u5982\u679c Supabase \u8981\u6c42\u9a57\u8b49\u4fe1\u7bb1\uff0c\u8acb\u5148\u53bb\u4fe1\u7bb1\u9ede\u958b\u9a57\u8b49\u4fe1\u3002',
 };
 
@@ -159,10 +157,10 @@ function compactExpense(row) {
     title: row.title,
     amount: Number(row.amount),
     payer: row.payer,
+    payer_label: row.payer_label || row.payer?.display_name || '',
     payer_member_id: row.payer_member_id,
     category: row.category,
     note: row.note || '',
-    split: (row.expense_splits || []).map((split) => split.member).filter(Boolean),
   };
 }
 
@@ -182,9 +180,8 @@ function App() {
     date: new Date().toISOString().slice(0, 10),
     title: '',
     amount: '',
-    payer_member_id: '',
+    payer_key: '',
     category: categories[0],
-    split_member_ids: [],
     note: '',
   });
 
@@ -228,7 +225,7 @@ function App() {
     const { data: expenseRows, error: expensesError } = await supabase
       .from('expenses')
       .select(
-        'id, couple_id, payer_member_id, date, title, amount, category, note, payer:members!expenses_payer_member_id_fkey(id, display_name, user_id), expense_splits(member:members(id, display_name, user_id))',
+        'id, couple_id, payer_member_id, payer_label, date, title, amount, category, note, payer:members!expenses_payer_member_id_fkey(id, display_name, user_id)',
       )
       .eq('couple_id', myMember.couple_id)
       .order('date', { ascending: false })
@@ -245,10 +242,7 @@ function App() {
     setExpenses((expenseRows || []).map(compactExpense));
     setForm((current) => ({
       ...current,
-      payer_member_id: current.payer_member_id || myMember.id,
-      split_member_ids: current.split_member_ids.length
-        ? current.split_member_ids
-        : (memberRows || []).map((member) => member.id),
+      payer_key: current.payer_key || myMember.id,
     }));
     setAppLoading(false);
   }, []);
@@ -289,35 +283,29 @@ function App() {
     [expenses, selectedMonth],
   );
 
+  const payerOptions = useMemo(
+    () => [
+      ...members.map((member) => ({ key: member.id, label: member.display_name, memberId: member.id })),
+      { key: 'joint', label: jointPayerLabel, memberId: currentMember?.id },
+    ],
+    [currentMember?.id, members],
+  );
+
   const summary = useMemo(() => {
-    const totals = Object.fromEntries(members.map((member) => [member.id, { paid: 0, share: 0 }]));
+    const payerTotals = new Map(payerOptions.map((option) => [option.label, 0]));
 
     monthlyExpenses.forEach((expense) => {
       const amount = Number(expense.amount);
-      if (totals[expense.payer_member_id]) totals[expense.payer_member_id].paid += amount;
-      const splitAmount = amount / Math.max(expense.split.length, 1);
-      expense.split.forEach((member) => {
-        if (totals[member.id]) totals[member.id].share += splitAmount;
-      });
+      const label = expense.payer_label || expense.payer?.display_name || jointPayerLabel;
+      payerTotals.set(label, (payerTotals.get(label) || 0) + amount);
     });
-
-    const balances = members.map((member) => ({
-      ...member,
-      net: (totals[member.id]?.paid || 0) - (totals[member.id]?.share || 0),
-    }));
-    const creditor = balances.find((member) => member.net > 1);
-    const debtor = balances.find((member) => member.net < -1);
 
     return {
       total: monthlyExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0),
       count: monthlyExpenses.length,
-      totals,
-      settlement:
-        creditor && debtor
-          ? `${debtor.display_name} ${text.owedTo} ${creditor.display_name} ${money(Math.min(creditor.net, Math.abs(debtor.net)))}`
-          : text.equal,
+      payerTotals: [...payerTotals.entries()].map(([label, amount]) => ({ label, amount })),
     };
-  }, [members, monthlyExpenses]);
+  }, [monthlyExpenses, payerOptions]);
 
   const categorySummary = useMemo(() => {
     const totals = new Map();
@@ -340,16 +328,6 @@ function App() {
 
   function updateForm(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
-  }
-
-  function toggleSplit(memberId) {
-    setForm((current) => {
-      const exists = current.split_member_ids.includes(memberId);
-      const nextSplit = exists
-        ? current.split_member_ids.filter((id) => id !== memberId)
-        : [...current.split_member_ids, memberId];
-      return { ...current, split_member_ids: nextSplit.length ? nextSplit : [memberId] };
-    });
   }
 
   async function submitAuth(event) {
@@ -381,36 +359,24 @@ function App() {
     if (!form.title.trim() || !amount || amount <= 0) return;
 
     setError('');
-    const { data: expense, error: expenseError } = await supabase
+    const selectedPayer = payerOptions.find((option) => option.key === form.payer_key) || payerOptions[0];
+    const payerMemberId = selectedPayer?.key === 'joint' ? currentMember.id : selectedPayer?.memberId;
+    const { error: expenseError } = await supabase
       .from('expenses')
       .insert({
         couple_id: currentMember.couple_id,
-        payer_member_id: form.payer_member_id,
+        payer_member_id: payerMemberId,
+        payer_label: selectedPayer?.label || jointPayerLabel,
         date: form.date,
         title: form.title.trim(),
         amount,
         category: form.category,
         note: form.note.trim(),
         created_by: session.user.id,
-      })
-      .select('id')
-      .single();
+      });
 
     if (expenseError) {
       setError(expenseError.message);
-      return;
-    }
-
-    const { error: splitError } = await supabase.from('expense_splits').insert(
-      form.split_member_ids.map((memberId) => ({
-        expense_id: expense.id,
-        member_id: memberId,
-        share_ratio: 1,
-      })),
-    );
-
-    if (splitError) {
-      setError(splitError.message);
       return;
     }
 
@@ -428,13 +394,12 @@ function App() {
 
   function exportCsv() {
     const rows = [
-      ['date', 'title', 'amount', 'payer', 'split', 'category', 'note'],
+      ['date', 'title', 'amount', 'payer', 'category', 'note'],
       ...monthlyExpenses.map((expense) => [
         expense.date,
         expense.title,
         expense.amount,
-        expense.payer?.display_name || '',
-        expense.split.map((member) => member.display_name).join('/'),
+        expense.payer_label || expense.payer?.display_name || '',
         expense.category,
         expense.note,
       ]),
@@ -591,25 +556,21 @@ function App() {
           </small>
         </div>
         <div className="metric">
-          <span>{text.settlement}</span>
-          <strong>{summary.settlement}</strong>
-          <small>{text.splitHint}</small>
+          <span>{text.payerSummary}</span>
+          <strong>{summary.count}</strong>
+          <small>{text.payerSummaryHint}</small>
         </div>
       </section>
 
       <CategoryPieChart slices={categorySummary.slices} total={categorySummary.total} />
 
       <section className="person-strip">
-        {members.map((member) => (
-          <article className="person-card" key={member.id}>
-            <span>{member.display_name}</span>
+        {summary.payerTotals.map((payerTotal, index) => (
+          <article className="person-card" key={payerTotal.label}>
+            <span>{payerTotal.label}</span>
             <div>
-              <strong>{money(summary.totals[member.id]?.paid || 0)}</strong>
+              <strong>{money(payerTotal.amount)}</strong>
               <small>{text.paid}</small>
-            </div>
-            <div>
-              <strong>{money(summary.totals[member.id]?.share || 0)}</strong>
-              <small>{text.share}</small>
             </div>
           </article>
         ))}
@@ -651,10 +612,10 @@ function App() {
         <div className="two-columns">
           <label>
             {text.payer}
-            <select value={form.payer_member_id} onChange={(event) => updateForm('payer_member_id', event.target.value)}>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.display_name}
+            <select value={form.payer_key} onChange={(event) => updateForm('payer_key', event.target.value)}>
+              {payerOptions.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -668,22 +629,6 @@ function App() {
             </select>
           </label>
         </div>
-
-        <fieldset>
-          <legend>{text.splitWith}</legend>
-          <div className="segmented">
-            {members.map((member) => (
-              <button
-                type="button"
-                key={member.id}
-                className={form.split_member_ids.includes(member.id) ? 'active' : ''}
-                onClick={() => toggleSplit(member.id)}
-              >
-                {member.display_name}
-              </button>
-            ))}
-          </div>
-        </fieldset>
 
         <label>
           {text.note}
@@ -713,8 +658,7 @@ function App() {
                 <div>
                   <strong>{expense.title}</strong>
                   <small>
-                    {expense.date} · {expense.payer?.display_name} {text.createdBy} ·{' '}
-                    {expense.split.map((member) => member.display_name).join(' / ')} {text.splitLabel}
+                    {expense.date} · {expense.payer_label || expense.payer?.display_name} {text.createdBy}
                   </small>
                 </div>
               </div>
@@ -733,3 +677,4 @@ function App() {
 }
 
 export default App;
+

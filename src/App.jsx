@@ -38,12 +38,11 @@ const text = {
   empty: '\u9019\u500b\u6708\u9084\u6c92\u6709\u652f\u51fa\u3002',
   delete: '\u522a\u9664',
   signInTitle: '\u767b\u5165\u5171\u540c\u5e33\u672c',
-  signInCopy: '\u7528 email \u548c\u5bc6\u78bc\u767b\u5165\uff0c\u7b2c\u4e00\u6b21\u4f7f\u7528\u5148\u8a3b\u518a\u3002',
+  signInCopy: '\u7528\u5df2\u5efa\u7acb\u7684 email \u548c\u5bc6\u78bc\u767b\u5165\u3002',
   email: 'Email',
   password: '\u5bc6\u78bc',
   passwordHint: '\u81f3\u5c11 6 \u500b\u5b57\u5143',
   signIn: '\u767b\u5165',
-  signUp: '\u8a3b\u518a',
   signOut: '\u767b\u51fa',
   loading: '\u8f09\u5165\u4e2d...',
   setupTitle: '\u9700\u8981 Supabase \u8a2d\u5b9a',
@@ -56,7 +55,6 @@ const text = {
   equal: '\u9019\u500b\u6708\u525b\u597d\u6253\u5e73',
   owedTo: '\u8981\u7d66',
   createdBy: '\u4ed8\u6b3e',
-  signedUp: '\u8a3b\u518a\u5b8c\u6210\uff0c\u5982\u679c Supabase \u8981\u6c42\u9a57\u8b49\u4fe1\u7bb1\uff0c\u8acb\u5148\u53bb\u4fe1\u7bb1\u9ede\u958b\u9a57\u8b49\u4fe1\u3002',
 };
 
 function polarToCartesian(center, radius, angleInDegrees) {
@@ -167,9 +165,7 @@ function compactExpense(row) {
 
 function App() {
   const [session, setSession] = useState(null);
-  const [authMode, setAuthMode] = useState('sign-in');
   const [authForm, setAuthForm] = useState({ email: '', password: '' });
-  const [authMessage, setAuthMessage] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
   const [error, setError] = useState('');
@@ -336,7 +332,6 @@ function App() {
     event.preventDefault();
     if (!supabase || !authForm.email.trim() || !authForm.password) return;
     setAuthLoading(true);
-    setAuthMessage('');
     setError('');
 
     const credentials = {
@@ -344,13 +339,9 @@ function App() {
       password: authForm.password,
     };
 
-    const { error: authError } =
-      authMode === 'sign-up'
-        ? await supabase.auth.signUp(credentials)
-        : await supabase.auth.signInWithPassword(credentials);
+    const { error: authError } = await supabase.auth.signInWithPassword(credentials);
 
     if (authError) setError(authError.message);
-    else if (authMode === 'sign-up') setAuthMessage(text.signedUp);
     setAuthLoading(false);
   }
 
@@ -441,30 +432,6 @@ function App() {
           <h1>Our Ledger</h1>
           <h2>{text.signInTitle}</h2>
           <p>{text.signInCopy}</p>
-          <div className="auth-tabs" role="tablist" aria-label={text.signInTitle}>
-            <button
-              className={authMode === 'sign-in' ? 'active' : ''}
-              type="button"
-              onClick={() => {
-                setAuthMode('sign-in');
-                setAuthMessage('');
-                setError('');
-              }}
-            >
-              {text.signIn}
-            </button>
-            <button
-              className={authMode === 'sign-up' ? 'active' : ''}
-              type="button"
-              onClick={() => {
-                setAuthMode('sign-up');
-                setAuthMessage('');
-                setError('');
-              }}
-            >
-              {text.signUp}
-            </button>
-          </div>
           <label>
             {text.email}
             <input
@@ -482,15 +449,14 @@ function App() {
               onChange={(event) => setAuthForm((current) => ({ ...current, password: event.target.value }))}
               type="password"
               minLength={6}
-              autoComplete={authMode === 'sign-in' ? 'current-password' : 'new-password'}
+              autoComplete="current-password"
               placeholder={text.passwordHint}
               required
             />
           </label>
           <button className="submit-button" type="submit" disabled={authLoading}>
-            {authLoading ? text.loading : authMode === 'sign-up' ? text.signUp : text.signIn}
+            {authLoading ? text.loading : text.signIn}
           </button>
-          {authMessage ? <p className="success-message">{authMessage}</p> : null}
           {error ? <p className="error-message">{error}</p> : null}
         </form>
       </main>

@@ -28,8 +28,8 @@ The included Windows helper starts Vite on the local network:
 
 1. Create a Supabase project.
 2. In Supabase SQL Editor, run `supabase/schema.sql`.
-3. Enable Email Auth and password signups in Supabase Authentication.
-4. Sign up once with both emails from the app.
+3. Enable Email Auth in Supabase Authentication.
+4. Create both user accounts in Supabase Auth.
 5. In Supabase Auth > Users, copy both user IDs.
 6. Insert one couple and two `members` rows using the commented setup block at the bottom of `supabase/schema.sql`.
 7. Create `.env.local` from `.env.example`:

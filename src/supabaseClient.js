@@ -3,8 +3,25 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
+function normalizeSupabaseUrl(url) {
+  return String(url || '').trim().replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+}
 
-export const supabase = hasSupabaseConfig
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+const normalizedSupabaseUrl = normalizeSupabaseUrl(supabaseUrl);
+const normalizedSupabaseAnonKey = String(supabaseAnonKey || '').trim();
+
+export const hasSupabaseConfig = Boolean(normalizedSupabaseUrl && normalizedSupabaseAnonKey);
+
+let client = null;
+let clientError = '';
+
+if (hasSupabaseConfig) {
+  try {
+    client = createClient(normalizedSupabaseUrl, normalizedSupabaseAnonKey);
+  } catch (error) {
+    clientError = error instanceof Error ? error.message : String(error);
+  }
+}
+
+export const supabase = client;
+export const supabaseConfigError = clientError;

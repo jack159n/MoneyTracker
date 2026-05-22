@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
-import { hasSupabaseConfig, supabase } from './supabaseClient.js';
+import { hasSupabaseConfig, supabase, supabaseConfigError } from './supabaseClient.js';
 
 const categories = [
   '\u5403\u98ef',
@@ -48,6 +48,7 @@ const text = {
   loading: '\u8f09\u5165\u4e2d...',
   setupTitle: '\u9700\u8981 Supabase \u8a2d\u5b9a',
   setupCopy: '\u8acb\u5148\u5efa\u7acb .env.local\uff0c\u653e\u5165 VITE_SUPABASE_URL \u548c VITE_SUPABASE_ANON_KEY\u3002',
+  setupError: 'Supabase config error',
   lockedTitle: '\u9019\u500b\u5e33\u865f\u9084\u4e0d\u5728\u5171\u540c\u5e33\u672c\u88e1',
   lockedCopy: '\u8acb\u5230 Supabase Auth \u8907\u88fd\u9019\u500b user id\uff0c\u518d\u628a\u5b83\u52a0\u5230 members \u8868\u3002',
   reload: '\u91cd\u65b0\u8f09\u5165',
@@ -416,7 +417,7 @@ function App() {
     URL.revokeObjectURL(url);
   }
 
-  if (!hasSupabaseConfig) {
+  if (!hasSupabaseConfig || !supabase) {
     return (
       <main className="app-shell auth-shell">
         <section className="auth-card">
@@ -424,6 +425,7 @@ function App() {
           <h1>Our Ledger</h1>
           <h2>{text.setupTitle}</h2>
           <p>{text.setupCopy}</p>
+          {supabaseConfigError ? <p className="error-message">{text.setupError}: {supabaseConfigError}</p> : null}
           <code>.env.example</code>
         </section>
       </main>

@@ -1,6 +1,6 @@
 {
-  "name": "Our Ledger",
-  "short_name": "Ledger",
+  "name": "兩人小帳本",
+  "short_name": "小帳本",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f7f2e8",

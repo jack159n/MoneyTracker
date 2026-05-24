@@ -1,4 +1,4 @@
-# Deploy Our Ledger
+# Deploy 兩人小帳本
 
 This app is designed to run as:
 

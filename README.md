@@ -1,4 +1,4 @@
-# Our Ledger
+# 兩人小帳本
 
 Mobile-first shared expense tracker for Jay and Ling.
 
@@ -32,6 +32,8 @@ iPhone Safari / PWA -> Vercel frontend -> Supabase Auth + Postgres
   - Category: all plus configured categories
   - Date: this month, this week, last week, specific day
 - CSV export for the currently filtered detail list
+- Quick expense templates and duplicate-to-form flow
+- Search and sort monthly details
 - PWA manifest and service worker
 
 ## Development

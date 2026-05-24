@@ -1,6 +1,21 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { hasSupabaseConfig, supabase, supabaseConfigError } from './supabaseClient.js';
 
+import {
+  BarChart3,
+  CheckCircle2,
+  Copy,
+  Download,
+  Pencil,
+  Plus,
+  Search,
+  Smartphone,
+  Trash2,
+  X,
+} from 'lucide-react';
+
+const appName = '\u5169\u4eba\u5c0f\u5e33\u672c';
+
 const categories = [
   '\u98f2\u98df',
   '\u4ea4\u901a',
@@ -21,6 +36,16 @@ const categoryColorMap = {
 };
 const jointPayerLabel = 'Jay&Ling';
 
+const quickTemplates = [
+  { title: '\u65e9\u9910', category: '\u98f2\u98df' },
+  { title: '\u5348\u9910', category: '\u98f2\u98df' },
+  { title: '\u665a\u9910', category: '\u98f2\u98df' },
+  { title: '\u98f2\u6599', category: '\u98f2\u98df' },
+  { title: '\u4ea4\u901a', category: '\u4ea4\u901a' },
+  { title: '\u623f\u79df', category: '\u623f\u79df' },
+  { title: '\u7d04\u6703', category: '\u7d04\u6703' },
+];
+
 const text = {
   appKicker: '\u5169\u4eba\u5171\u540c\u8a18\u5e33',
   month: '\u6708\u4efd',
@@ -33,6 +58,7 @@ const text = {
   chartEmpty: '\u6709\u65b0\u589e\u652f\u51fa\u5f8c\uff0c\u9019\u88e1\u6703\u986f\u793a\u6bd4\u4f8b\u3002',
   chartModeTotal: '\u7e3d\u984d',
   chartModePayer: '\u4ed8\u6b3e\u4eba',
+  installTip: '\u7528 iPhone Safari \u5206\u4eab\u9078\u55ae\u52a0\u5230\u4e3b\u756b\u9762\uff0c\u4e0b\u6b21\u5c31\u50cf App \u4e00\u6a23\u6253\u958b\u3002',
   all: '\u5168\u90e8',
   user: 'User',
   dateRange: '\u65e5\u671f',
@@ -42,6 +68,7 @@ const text = {
   specificDay: '\u67d0\u65e5',
   paid: '\u5df2\u4ed8\u6b3e',
   addOne: '\u65b0\u589e\u4e00\u7b46',
+  quickTemplates: '\u5e38\u7528\u652f\u51fa',
   export: '\u532f\u51fa',
   title: '\u540d\u7a31',
   titlePlaceholder: '\u65e9\u9910\u3001\u96fb\u5f71\u7968\u3001\u6c34\u96fb\u8cbb',
@@ -54,9 +81,17 @@ const text = {
   addExpense: '\u65b0\u589e\u652f\u51fa',
   details: '\u672c\u6708\u660e\u7d30',
   empty: '\u9019\u500b\u6708\u9084\u6c92\u6709\u652f\u51fa\u3002',
+  search: '\u641c\u5c0b',
+  searchPlaceholder: '\u641c\u5c0b\u540d\u7a31\u6216\u5099\u8a3b',
+  sort: '\u6392\u5e8f',
+  newest: '\u6700\u65b0',
+  amountHigh: '\u91d1\u984d\u5927\u5230\u5c0f',
+  amountLow: '\u91d1\u984d\u5c0f\u5230\u5927',
   edit: '\u7de8\u8f2f',
   save: '\u5132\u5b58',
   cancel: '\u53d6\u6d88',
+  copy: '\u8907\u88fd',
+  copiedToForm: '\u5df2\u8907\u88fd\u5230\u65b0\u589e\u8868\u55ae',
   delete: '\u522a\u9664',
   confirmDelete: '\u78ba\u8a8d\u522a\u9664',
   signInTitle: '\u767b\u5165\u5171\u540c\u5e33\u672c',
@@ -77,6 +112,7 @@ const text = {
   equal: '\u9019\u500b\u6708\u525b\u597d\u6253\u5e73',
   owedTo: '\u8981\u7d66',
   createdBy: '\u4ed8\u6b3e',
+  added: '\u5df2\u65b0\u589e',
 };
 
 function normalizeCategory(category) {
@@ -160,7 +196,10 @@ function PieChartBlock({ modes, activeMode, onModeChange }) {
     return (
       <section className="chart-panel">
         <div className="section-title">
-          <h2>{text.chartTitle}</h2>
+          <h2>
+            <BarChart3 size={18} aria-hidden="true" />
+            {text.chartTitle}
+          </h2>
         </div>
         <div className="chart-mode-scroll" aria-label={text.chartTitle}>
           {modes.map((mode) => (
@@ -184,7 +223,10 @@ function PieChartBlock({ modes, activeMode, onModeChange }) {
   return (
     <section className="chart-panel">
       <div className="section-title">
-        <h2>{text.chartTitle}</h2>
+        <h2>
+          <BarChart3 size={18} aria-hidden="true" />
+          {text.chartTitle}
+        </h2>
         <span>{money(total)}</span>
       </div>
       <div className="chart-mode-scroll" aria-label={text.chartTitle}>
@@ -276,12 +318,15 @@ function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [chartMode, setChartMode] = useState('category');
   const [detailFilters, setDetailFilters] = useState({
     payer: 'all',
     category: 'all',
     dateRange: 'month',
     day: todayString(),
+    search: '',
+    sort: 'newest',
   });
   const [currentMember, setCurrentMember] = useState(null);
   const [members, setMembers] = useState([]);
@@ -395,6 +440,12 @@ function App() {
     return () => subscription.subscription.unsubscribe();
   }, [loadLedger]);
 
+  useEffect(() => {
+    if (!successMessage) return undefined;
+    const timer = window.setTimeout(() => setSuccessMessage(''), 2600);
+    return () => window.clearTimeout(timer);
+  }, [successMessage]);
+
   const months = useMemo(() => {
     const values = [...new Set(expenses.map((expense) => monthOf(expense.date)))].sort().reverse();
     return values.includes(selectedMonth) ? values : [selectedMonth, ...values];
@@ -430,10 +481,15 @@ function App() {
   }, [monthlyExpenses, payerOptions]);
 
   const visibleDetailExpenses = useMemo(() => {
-    return monthlyExpenses.filter((expense) => {
+    const query = detailFilters.search.trim().toLocaleLowerCase('zh-TW');
+    const filtered = monthlyExpenses.filter((expense) => {
       const payerLabel = expense.payer_label || expense.payer?.display_name || jointPayerLabel;
       if (detailFilters.payer !== 'all' && payerLabel !== detailFilters.payer) return false;
       if (detailFilters.category !== 'all' && expense.category !== detailFilters.category) return false;
+      if (query) {
+        const haystack = `${expense.title} ${expense.note || ''}`.toLocaleLowerCase('zh-TW');
+        if (!haystack.includes(query)) return false;
+      }
 
       if (detailFilters.dateRange === 'day') return expense.date === detailFilters.day;
 
@@ -444,6 +500,12 @@ function App() {
       }
 
       return true;
+    });
+
+    return [...filtered].sort((first, second) => {
+      if (detailFilters.sort === 'amount-high') return second.amount - first.amount;
+      if (detailFilters.sort === 'amount-low') return first.amount - second.amount;
+      return second.date.localeCompare(first.date);
     });
   }, [detailFilters, monthlyExpenses]);
 
@@ -477,6 +539,36 @@ function App() {
 
   function updateDetailFilter(key, value) {
     setDetailFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function applyTemplate(template) {
+    setForm((current) => ({
+      ...current,
+      title: template.title,
+      category: template.category,
+      amount: '',
+    }));
+    setEditingExpenseId(null);
+    setDeleteTargetId(null);
+  }
+
+  function duplicateExpense(expense) {
+    const payerLabel = expense.payer_label || expense.payer?.display_name || jointPayerLabel;
+    const payerOption = payerOptions.find((option) => option.label === payerLabel);
+    const today = todayString();
+    setForm({
+      date: today,
+      title: expense.title,
+      amount: String(expense.amount),
+      payer_key: payerOption?.key || currentMember?.id || '',
+      category: normalizeCategory(expense.category),
+      note: expense.note || '',
+    });
+    setSelectedMonth(monthOf(today));
+    setEditingExpenseId(null);
+    setDeleteTargetId(null);
+    setSuccessMessage(text.copiedToForm);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function startEditing(expense) {
@@ -523,6 +615,7 @@ function App() {
     if (!form.title.trim() || !amount || amount <= 0) return;
 
     setError('');
+    setSuccessMessage('');
     const selectedPayer = payerOptions.find((option) => option.key === form.payer_key) || payerOptions[0];
     const payerMemberId = selectedPayer?.key === 'joint' ? currentMember.id : selectedPayer?.memberId;
     const { error: expenseError } = await supabase
@@ -545,6 +638,7 @@ function App() {
     }
 
     setSelectedMonth(monthOf(form.date));
+    setSuccessMessage(`${text.added} ${form.category} ${money(amount)}`);
     setForm((current) => ({ ...current, title: '', amount: '', note: '' }));
     await loadLedger(session);
   }
@@ -621,7 +715,7 @@ function App() {
       <main className="app-shell auth-shell">
         <section className="auth-card">
           <p className="eyebrow">{text.appKicker}</p>
-          <h1>Our Ledger</h1>
+          <h1>{appName}</h1>
           <h2>{text.setupTitle}</h2>
           <p>{text.setupCopy}</p>
           {supabaseConfigError ? <p className="error-message">{text.setupError}: {supabaseConfigError}</p> : null}
@@ -636,7 +730,7 @@ function App() {
       <main className="app-shell auth-shell">
         <form className="auth-card" onSubmit={submitAuth}>
           <p className="eyebrow">{text.appKicker}</p>
-          <h1>Our Ledger</h1>
+          <h1>{appName}</h1>
           <h2>{text.signInTitle}</h2>
           <p>{text.signInCopy}</p>
           <label>
@@ -679,7 +773,7 @@ function App() {
       <main className="app-shell auth-shell">
         <section className="auth-card">
           <p className="eyebrow">{text.appKicker}</p>
-          <h1>Our Ledger</h1>
+          <h1>{appName}</h1>
           <h2>{text.lockedTitle}</h2>
           <p>{text.lockedCopy}</p>
           <code>{session.user.id}</code>
@@ -702,7 +796,7 @@ function App() {
       <section className="top-panel">
         <div>
           <p className="eyebrow">{text.appKicker}</p>
-          <h1>Our Ledger</h1>
+          <h1>{appName}</h1>
         </div>
         <div className="top-actions">
           <div className="month-select">
@@ -722,6 +816,12 @@ function App() {
       </section>
 
       {error ? <p className="error-message">{error}</p> : null}
+      {successMessage ? (
+        <p className="success-message">
+          <CheckCircle2 size={17} aria-hidden="true" />
+          {successMessage}
+        </p>
+      ) : null}
 
       <section className="summary-grid" aria-label={text.total}>
         <div className="metric primary">
@@ -733,13 +833,33 @@ function App() {
         </div>
       </section>
 
+      <aside className="install-tip">
+        <Smartphone size={18} aria-hidden="true" />
+        <span>{text.installTip}</span>
+      </aside>
+
       <form className="expense-form" onSubmit={addExpense}>
         <div className="section-title">
-          <h2>{text.addOne}</h2>
-          <button className="ghost-button" type="button" onClick={exportCsv}>
-            {text.export}
+          <h2>
+            <Plus size={18} aria-hidden="true" />
+            {text.addOne}
+          </h2>
+          <button className="ghost-button icon-text-button" type="button" onClick={exportCsv}>
+            <Download size={16} aria-hidden="true" />
+            <span>{text.export}</span>
           </button>
         </div>
+
+        <section className="quick-template-panel" aria-label={text.quickTemplates}>
+          <span>{text.quickTemplates}</span>
+          <div className="quick-template-list">
+            {quickTemplates.map((template) => (
+              <button type="button" key={template.title} onClick={() => applyTemplate(template)}>
+                {template.title}
+              </button>
+            ))}
+          </div>
+        </section>
 
         <label>
           {text.title}
@@ -792,17 +912,43 @@ function App() {
           <input value={form.note} onChange={(event) => updateForm('note', event.target.value)} placeholder={text.optional} />
         </label>
 
-        <button className="submit-button" type="submit">
-          {text.addExpense}
+        <button className="submit-button icon-text-button" type="submit">
+          <Plus size={18} aria-hidden="true" />
+          <span>{text.addExpense}</span>
         </button>
       </form>
 
       <section className="ledger-list">
         <div className="section-title">
-          <h2>{text.details}</h2>
+          <h2>
+            <Search size={18} aria-hidden="true" />
+            {text.details}
+          </h2>
           <span>
             {visibleDetailExpenses.length} {text.records}
           </span>
+        </div>
+
+        <div className="detail-search-row">
+          <label className="search-field">
+            {text.search}
+            <span>
+              <Search size={16} aria-hidden="true" />
+              <input
+                value={detailFilters.search}
+                onChange={(event) => updateDetailFilter('search', event.target.value)}
+                placeholder={text.searchPlaceholder}
+              />
+            </span>
+          </label>
+          <label>
+            {text.sort}
+            <select value={detailFilters.sort} onChange={(event) => updateDetailFilter('sort', event.target.value)}>
+              <option value="newest">{text.newest}</option>
+              <option value="amount-high">{text.amountHigh}</option>
+              <option value="amount-low">{text.amountLow}</option>
+            </select>
+          </label>
         </div>
 
         <div className="detail-filters">
@@ -909,11 +1055,13 @@ function App() {
                       />
                     </label>
                     <div className="edit-actions">
-                      <button className="submit-button" type="submit">
-                        {text.save}
+                      <button className="submit-button icon-text-button" type="submit">
+                        <CheckCircle2 size={17} aria-hidden="true" />
+                        <span>{text.save}</span>
                       </button>
-                      <button className="ghost-button" type="button" onClick={stopEditing}>
-                        {text.cancel}
+                      <button className="ghost-button icon-text-button" type="button" onClick={stopEditing}>
+                        <X size={17} aria-hidden="true" />
+                        <span>{text.cancel}</span>
                       </button>
                     </div>
                   </form>
@@ -934,8 +1082,13 @@ function App() {
                     <div className="expense-side">
                       <strong>{money(expense.amount)}</strong>
                       <div className="expense-actions">
+                        <button type="button" onClick={() => duplicateExpense(expense)} aria-label={`${text.copy} ${expense.title}`}>
+                          <Copy size={15} aria-hidden="true" />
+                          <span>{text.copy}</span>
+                        </button>
                         <button type="button" onClick={() => startEditing(expense)} aria-label={`${text.edit} ${expense.title}`}>
-                          {text.edit}
+                          <Pencil size={15} aria-hidden="true" />
+                          <span>{text.edit}</span>
                         </button>
                         {isConfirmingDelete ? (
                           <>
@@ -945,10 +1098,12 @@ function App() {
                               onClick={() => removeExpense(expense.id)}
                               aria-label={`${text.confirmDelete} ${expense.title}`}
                             >
-                              {text.confirmDelete}
+                              <Trash2 size={15} aria-hidden="true" />
+                              <span>{text.confirmDelete}</span>
                             </button>
                             <button type="button" onClick={() => setDeleteTargetId(null)}>
-                              {text.cancel}
+                              <X size={15} aria-hidden="true" />
+                              <span>{text.cancel}</span>
                             </button>
                           </>
                         ) : (
@@ -960,7 +1115,8 @@ function App() {
                             }}
                             aria-label={`${text.delete} ${expense.title}`}
                           >
-                            {text.delete}
+                            <Trash2 size={15} aria-hidden="true" />
+                            <span>{text.delete}</span>
                           </button>
                         )}
                       </div>

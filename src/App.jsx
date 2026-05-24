@@ -731,11 +731,6 @@ function App() {
             {summary.count} {text.records}
           </small>
         </div>
-        <div className="metric">
-          <span>{text.payerSummary}</span>
-          <strong>{summary.count}</strong>
-          <small>{text.payerSummaryHint}</small>
-        </div>
       </section>
 
       <form className="expense-form" onSubmit={addExpense}>

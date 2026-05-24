@@ -122,7 +122,7 @@ select:focus {
 }
 
 .summary-grid {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
 }
 
 .metric,

@@ -113,6 +113,19 @@ create policy "members can delete couple expenses"
 on public.expenses for delete
 using (public.is_couple_member(expenses.couple_id));
 
+drop policy if exists "members can update couple expenses" on public.expenses;
+create policy "members can update couple expenses"
+on public.expenses for update
+using (public.is_couple_member(expenses.couple_id))
+with check (
+  public.is_couple_member(expenses.couple_id)
+  and exists (
+    select 1 from public.members payer
+    where payer.id = expenses.payer_member_id
+      and payer.couple_id = expenses.couple_id
+  )
+);
+
 drop policy if exists "members can read couple splits" on public.expense_splits;
 create policy "members can read couple splits"
 on public.expense_splits for select

@@ -2,7 +2,7 @@
 import { hasSupabaseConfig, supabase, supabaseConfigError } from './supabaseClient.js';
 
 const categories = [
-  '\u5403\u98ef',
+  '\u98f2\u98df',
   '\u4ea4\u901a',
   '\u751f\u6d3b',
   '\u7d04\u6703',
@@ -11,6 +11,14 @@ const categories = [
 ];
 
 const categoryColors = ['#17324d', '#2b6f74', '#d75a4a', '#b9852f', '#6d597a', '#5e6470'];
+const categoryColorMap = {
+  '\u98f2\u98df': { background: '#f5ded6', color: '#8d3226' },
+  '\u4ea4\u901a': { background: '#dcebed', color: '#1e5e64' },
+  '\u751f\u6d3b': { background: '#e4eadb', color: '#47622d' },
+  '\u7d04\u6703': { background: '#f2dfeb', color: '#7a3e68' },
+  '\u623f\u79df': { background: '#e1e5ef', color: '#283f67' },
+  '\u5176\u4ed6': { background: '#eee7dd', color: '#5e5143' },
+};
 const jointPayerLabel = 'Jay&Ling';
 
 const text = {
@@ -46,7 +54,11 @@ const text = {
   addExpense: '\u65b0\u589e\u652f\u51fa',
   details: '\u672c\u6708\u660e\u7d30',
   empty: '\u9019\u500b\u6708\u9084\u6c92\u6709\u652f\u51fa\u3002',
+  edit: '\u7de8\u8f2f',
+  save: '\u5132\u5b58',
+  cancel: '\u53d6\u6d88',
   delete: '\u522a\u9664',
+  confirmDelete: '\u78ba\u8a8d\u522a\u9664',
   signInTitle: '\u767b\u5165\u5171\u540c\u5e33\u672c',
   signInCopy: '\u7528\u5df2\u5efa\u7acb\u7684 email \u548c\u5bc6\u78bc\u767b\u5165\u3002',
   email: 'Email',
@@ -66,6 +78,14 @@ const text = {
   owedTo: '\u8981\u7d66',
   createdBy: '\u4ed8\u6b3e',
 };
+
+function normalizeCategory(category) {
+  return category === '\u5403\u98ef' ? '\u98f2\u98df' : category;
+}
+
+function getCategoryStyle(category) {
+  return categoryColorMap[normalizeCategory(category)] || categoryColorMap['\u5176\u4ed6'];
+}
 
 function polarToCartesian(center, radius, angleInDegrees) {
   const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
@@ -99,7 +119,8 @@ function buildCategorySummary(expenses, filterPayerLabel) {
   expenses.forEach((expense) => {
     const payerLabel = expense.payer_label || expense.payer?.display_name || jointPayerLabel;
     if (filterPayerLabel && payerLabel !== filterPayerLabel) return;
-    totals.set(expense.category, (totals.get(expense.category) || 0) + Number(expense.amount));
+    const category = normalizeCategory(expense.category);
+    totals.set(category, (totals.get(category) || 0) + Number(expense.amount));
   });
 
   const total = [...totals.values()].reduce((sum, amount) => sum + amount, 0);
@@ -244,7 +265,7 @@ function compactExpense(row) {
     payer: row.payer,
     payer_label: row.payer_label || row.payer?.display_name || '',
     payer_member_id: row.payer_member_id,
-    category: row.category,
+    category: normalizeCategory(row.category),
     note: row.note || '',
   };
 }
@@ -265,9 +286,19 @@ function App() {
   const [currentMember, setCurrentMember] = useState(null);
   const [members, setMembers] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
+    title: '',
+    amount: '',
+    payer_key: '',
+    category: categories[0],
+    note: '',
+  });
+  const [editForm, setEditForm] = useState({
+    date: todayString(),
     title: '',
     amount: '',
     payer_key: '',
@@ -440,8 +471,32 @@ function App() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateEditForm(key, value) {
+    setEditForm((current) => ({ ...current, [key]: value }));
+  }
+
   function updateDetailFilter(key, value) {
     setDetailFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function startEditing(expense) {
+    const payerLabel = expense.payer_label || expense.payer?.display_name || jointPayerLabel;
+    const payerOption = payerOptions.find((option) => option.label === payerLabel);
+    setError('');
+    setDeleteTargetId(null);
+    setEditingExpenseId(expense.id);
+    setEditForm({
+      date: expense.date,
+      title: expense.title,
+      amount: String(expense.amount),
+      payer_key: payerOption?.key || 'joint',
+      category: normalizeCategory(expense.category),
+      note: expense.note || '',
+    });
+  }
+
+  function stopEditing() {
+    setEditingExpenseId(null);
   }
 
   async function submitAuth(event) {
@@ -494,11 +549,47 @@ function App() {
     await loadLedger(session);
   }
 
+  async function saveExpense(event) {
+    event.preventDefault();
+    if (!supabase || !currentMember || !editingExpenseId) return;
+    const amount = Number(editForm.amount);
+    if (!editForm.title.trim() || !amount || amount <= 0) return;
+
+    setError('');
+    const selectedPayer = payerOptions.find((option) => option.key === editForm.payer_key) || payerOptions[0];
+    const payerMemberId = selectedPayer?.key === 'joint' ? currentMember.id : selectedPayer?.memberId;
+    const { error: updateError } = await supabase
+      .from('expenses')
+      .update({
+        payer_member_id: payerMemberId,
+        payer_label: selectedPayer?.label || jointPayerLabel,
+        date: editForm.date,
+        title: editForm.title.trim(),
+        amount,
+        category: editForm.category,
+        note: editForm.note.trim(),
+      })
+      .eq('id', editingExpenseId);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setSelectedMonth(monthOf(editForm.date));
+    setEditingExpenseId(null);
+    await loadLedger(session);
+  }
+
   async function removeExpense(id) {
     if (!supabase) return;
     const { error: deleteError } = await supabase.from('expenses').delete().eq('id', id);
     if (deleteError) setError(deleteError.message);
-    else await loadLedger(session);
+    else {
+      setDeleteTargetId(null);
+      if (editingExpenseId === id) setEditingExpenseId(null);
+      await loadLedger(session);
+    }
   }
 
   function exportCsv() {
@@ -776,25 +867,128 @@ function App() {
         {visibleDetailExpenses.length === 0 ? (
           <div className="empty-state">{text.empty}</div>
         ) : (
-          visibleDetailExpenses.map((expense) => (
-            <article className="expense-item" key={expense.id}>
-              <div className="expense-main">
-                <span className="category">{expense.category}</span>
-                <div>
-                  <strong>{expense.title}</strong>
-                  <small>
-                    {expense.date} · {expense.payer_label || expense.payer?.display_name} {text.createdBy}
-                  </small>
-                </div>
-              </div>
-              <div className="expense-side">
-                <strong>{money(expense.amount)}</strong>
-                <button type="button" onClick={() => removeExpense(expense.id)} aria-label={`${text.delete} ${expense.title}`}>
-                  {text.delete}
-                </button>
-              </div>
-            </article>
-          ))
+          visibleDetailExpenses.map((expense) => {
+            const categoryStyle = getCategoryStyle(expense.category);
+            const isEditing = editingExpenseId === expense.id;
+            const isConfirmingDelete = deleteTargetId === expense.id;
+
+            return (
+              <article className={isEditing ? 'expense-item editing' : 'expense-item'} key={expense.id}>
+                {isEditing ? (
+                  <form className="expense-edit-form" onSubmit={saveExpense}>
+                    <label>
+                      {text.title}
+                      <input
+                        value={editForm.title}
+                        onChange={(event) => updateEditForm('title', event.target.value)}
+                        placeholder={text.titlePlaceholder}
+                      />
+                    </label>
+                    <div className="two-columns">
+                      <label>
+                        {text.amount}
+                        <input
+                          inputMode="decimal"
+                          value={editForm.amount}
+                          onChange={(event) => updateEditForm('amount', event.target.value)}
+                          placeholder="0"
+                        />
+                      </label>
+                      <label>
+                        {text.date}
+                        <input type="date" value={editForm.date} onChange={(event) => updateEditForm('date', event.target.value)} />
+                      </label>
+                    </div>
+                    <div className="two-columns">
+                      <label>
+                        {text.payer}
+                        <select value={editForm.payer_key} onChange={(event) => updateEditForm('payer_key', event.target.value)}>
+                          {payerOptions.map((option) => (
+                            <option key={option.key} value={option.key}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        {text.category}
+                        <select value={editForm.category} onChange={(event) => updateEditForm('category', event.target.value)}>
+                          {categories.map((category) => (
+                            <option key={category}>{category}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label>
+                      {text.note}
+                      <input
+                        value={editForm.note}
+                        onChange={(event) => updateEditForm('note', event.target.value)}
+                        placeholder={text.optional}
+                      />
+                    </label>
+                    <div className="edit-actions">
+                      <button className="submit-button" type="submit">
+                        {text.save}
+                      </button>
+                      <button className="ghost-button" type="button" onClick={stopEditing}>
+                        {text.cancel}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div className="expense-main">
+                      <span className="category" style={{ color: categoryStyle.color, background: categoryStyle.background }}>
+                        {expense.category}
+                      </span>
+                      <div>
+                        <strong>{expense.title}</strong>
+                        <small>
+                          {expense.date} · {expense.payer_label || expense.payer?.display_name} {text.createdBy}
+                        </small>
+                        {expense.note ? <p className="expense-note">{expense.note}</p> : null}
+                      </div>
+                    </div>
+                    <div className="expense-side">
+                      <strong>{money(expense.amount)}</strong>
+                      <div className="expense-actions">
+                        <button type="button" onClick={() => startEditing(expense)} aria-label={`${text.edit} ${expense.title}`}>
+                          {text.edit}
+                        </button>
+                        {isConfirmingDelete ? (
+                          <>
+                            <button
+                              className="danger"
+                              type="button"
+                              onClick={() => removeExpense(expense.id)}
+                              aria-label={`${text.confirmDelete} ${expense.title}`}
+                            >
+                              {text.confirmDelete}
+                            </button>
+                            <button type="button" onClick={() => setDeleteTargetId(null)}>
+                              {text.cancel}
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingExpenseId(null);
+                              setDeleteTargetId(expense.id);
+                            }}
+                            aria-label={`${text.delete} ${expense.title}`}
+                          >
+                            {text.delete}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </article>
+            );
+          })
         )}
       </section>
     </main>

@@ -424,7 +424,8 @@ legend {
 .segmented button,
 .ghost-button,
 .submit-button,
-.expense-side button {
+.expense-side button,
+.edit-actions button {
   min-height: 44px;
   border: 1px solid #cfc4b3;
   border-radius: 8px;
@@ -460,6 +461,10 @@ legend {
   border-top: 1px solid #eee4d5;
 }
 
+.expense-item.editing {
+  display: block;
+}
+
 .expense-item:first-of-type {
   border-top: 0;
 }
@@ -479,6 +484,14 @@ legend {
 
 .expense-main strong,
 .expense-main small {
+  overflow-wrap: anywhere;
+}
+
+.expense-note {
+  margin: 1px 0 0;
+  color: #4e5965;
+  font-size: 0.88rem;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
@@ -506,6 +519,34 @@ legend {
   padding: 0 10px;
   color: #a64234;
   font-size: 0.78rem;
+}
+
+.expense-side button.danger {
+  border-color: #a64234;
+  color: #fffaf0;
+  background: #a64234;
+}
+
+.expense-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.expense-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.edit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.edit-actions .submit-button {
+  min-height: 46px;
 }
 
 .empty-state {
@@ -643,6 +684,14 @@ code {
 
   .expense-main {
     align-items: flex-start;
+  }
+
+  .expense-side {
+    max-width: 42%;
+  }
+
+  .expense-actions {
+    justify-content: flex-end;
   }
 
   .schema-grid {

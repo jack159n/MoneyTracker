@@ -738,20 +738,6 @@ function App() {
         </div>
       </section>
 
-      <PieChartBlock modes={chartModes} activeMode={chartMode} onModeChange={setChartMode} />
-
-      <section className="person-strip">
-        {summary.payerTotals.map((payerTotal, index) => (
-          <article className="person-card" key={payerTotal.label}>
-            <span>{payerTotal.label}</span>
-            <div>
-              <strong>{money(payerTotal.amount)}</strong>
-              <small>{text.paid}</small>
-            </div>
-          </article>
-        ))}
-      </section>
-
       <form className="expense-form" onSubmit={addExpense}>
         <div className="section-title">
           <h2>{text.addOne}</h2>
@@ -990,6 +976,20 @@ function App() {
             );
           })
         )}
+      </section>
+
+      <PieChartBlock modes={chartModes} activeMode={chartMode} onModeChange={setChartMode} />
+
+      <section className="person-strip">
+        {summary.payerTotals.map((payerTotal) => (
+          <article className="person-card" key={payerTotal.label}>
+            <span>{payerTotal.label}</span>
+            <div>
+              <strong>{money(payerTotal.amount)}</strong>
+              <small>{text.paid}</small>
+            </div>
+          </article>
+        ))}
       </section>
     </main>
   );

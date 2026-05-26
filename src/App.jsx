@@ -37,6 +37,9 @@ const categoryColorMap = {
   '\u5176\u4ed6': { background: '#eee7dd', color: '#5e5143' },
 };
 const jointPayerLabel = 'Jay&Ling';
+const detailPageSize = 10;
+const expenseSelect =
+  'id, couple_id, payer_member_id, payer_label, date, title, amount, category, note, payer:members!expenses_payer_member_id_fkey(id, display_name, user_id)';
 
 const quickTemplates = [
   { title: '\u65e9\u9910', category: '\u98f2\u98df' },
@@ -97,6 +100,10 @@ const text = {
   delete: '\u522a\u9664',
   confirmDelete: '\u78ba\u8a8d\u522a\u9664',
   updateNotApplied: '\u7de8\u8f2f\u6c92\u6709\u5beb\u5165\uff1a\u8acb\u78ba\u8a8d Supabase \u5df2\u57f7\u884c update policy migration\u3002',
+  saved: '\u5df2\u5132\u5b58',
+  saving: '\u5132\u5b58\u4e2d...',
+  previousPage: '\u4e0a\u4e00\u9801',
+  nextPage: '\u4e0b\u4e00\u9801',
   signInTitle: '\u767b\u5165\u5171\u540c\u5e33\u672c',
   signInCopy: '\u7528\u5df2\u5efa\u7acb\u7684 email \u548c\u5bc6\u78bc\u767b\u5165\u3002',
   email: 'Email',
@@ -315,6 +322,17 @@ function compactExpense(row) {
   };
 }
 
+function expenseMatchesUpdate(expense, values) {
+  return (
+    expense.date === values.date &&
+    expense.title === values.title &&
+    Number(expense.amount) === Number(values.amount) &&
+    normalizeCategory(expense.category) === normalizeCategory(values.category) &&
+    (expense.note || '') === (values.note || '') &&
+    (expense.payer_label || expense.payer?.display_name || '') === values.payer_label
+  );
+}
+
 function App() {
   const [session, setSession] = useState(null);
   const [authForm, setAuthForm] = useState({ email: '', password: '' });
@@ -335,7 +353,9 @@ function App() {
   const [members, setMembers] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [editingExpenseId, setEditingExpenseId] = useState(null);
+  const [savingExpenseId, setSavingExpenseId] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [detailPage, setDetailPage] = useState(1);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -393,9 +413,7 @@ function App() {
 
     const { data: expenseRows, error: expensesError } = await supabase
       .from('expenses')
-      .select(
-        'id, couple_id, payer_member_id, payer_label, date, title, amount, category, note, payer:members!expenses_payer_member_id_fkey(id, display_name, user_id)',
-      )
+      .select(expenseSelect)
       .eq('couple_id', myMember.couple_id)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
@@ -512,6 +530,16 @@ function App() {
     });
   }, [detailFilters, monthlyExpenses]);
 
+  const detailPageCount = Math.max(1, Math.ceil(visibleDetailExpenses.length / detailPageSize));
+  const paginatedDetailExpenses = useMemo(() => {
+    const start = (detailPage - 1) * detailPageSize;
+    return visibleDetailExpenses.slice(start, start + detailPageSize);
+  }, [detailPage, visibleDetailExpenses]);
+
+  useEffect(() => {
+    setDetailPage((current) => Math.min(current, detailPageCount));
+  }, [detailPageCount]);
+
   const chartModes = useMemo(() => {
     const categorySummary = buildCategorySummary(monthlyExpenses);
     const payerEntries = summary.payerTotals.map((payerTotal) => [payerTotal.label, payerTotal.amount]);
@@ -542,6 +570,12 @@ function App() {
 
   function updateDetailFilter(key, value) {
     setDetailFilters((current) => ({ ...current, [key]: value }));
+    setDetailPage(1);
+  }
+
+  function changeSelectedMonth(month) {
+    setSelectedMonth(month);
+    setDetailPage(1);
   }
 
   function applyTemplate(template) {
@@ -656,35 +690,55 @@ function App() {
     setSuccessMessage('');
     const selectedPayer = payerOptions.find((option) => option.key === editForm.payer_key) || payerOptions[0];
     const payerMemberId = selectedPayer?.key === 'joint' ? currentMember.id : selectedPayer?.memberId;
-    const { data: updatedExpense, error: updateError } = await supabase
+    const updateValues = {
+      payer_member_id: payerMemberId,
+      payer_label: selectedPayer?.label || jointPayerLabel,
+      date: editForm.date,
+      title: editForm.title.trim(),
+      amount,
+      category: editForm.category,
+      note: editForm.note.trim(),
+    };
+
+    setSavingExpenseId(editingExpenseId);
+    const { error: updateError } = await supabase
       .from('expenses')
-      .update({
-        payer_member_id: payerMemberId,
-        payer_label: selectedPayer?.label || jointPayerLabel,
-        date: editForm.date,
-        title: editForm.title.trim(),
-        amount,
-        category: editForm.category,
-        note: editForm.note.trim(),
-      })
+      .update(updateValues)
       .eq('id', editingExpenseId)
-      .eq('couple_id', currentMember.couple_id)
-      .select('id')
-      .maybeSingle();
+      .eq('couple_id', currentMember.couple_id);
 
     if (updateError) {
+      setSavingExpenseId(null);
       setError(updateError.message);
       return;
     }
 
-    if (!updatedExpense) {
+    const { data: refreshedExpense, error: refreshError } = await supabase
+      .from('expenses')
+      .select(expenseSelect)
+      .eq('id', editingExpenseId)
+      .eq('couple_id', currentMember.couple_id)
+      .maybeSingle();
+
+    if (refreshError) {
+      setSavingExpenseId(null);
+      setError(refreshError.message);
+      return;
+    }
+
+    const compactedExpense = refreshedExpense ? compactExpense(refreshedExpense) : null;
+    if (!compactedExpense || !expenseMatchesUpdate(compactedExpense, updateValues)) {
+      setSavingExpenseId(null);
       setError(text.updateNotApplied);
       return;
     }
 
     setSelectedMonth(monthOf(editForm.date));
-    setSuccessMessage(`${text.save} ${editForm.category} ${money(amount)}`);
+    setDetailPage(1);
+    setSuccessMessage(`${text.saved} ${editForm.category} ${money(amount)}`);
     setEditingExpenseId(null);
+    setSavingExpenseId(null);
+    setExpenses((current) => current.map((expense) => (expense.id === compactedExpense.id ? compactedExpense : expense)));
     await loadLedger(session);
   }
 
@@ -814,7 +868,7 @@ function App() {
         <div className="top-actions">
           <div className="month-select">
             <label htmlFor="month">{text.month}</label>
-            <select id="month" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)}>
+            <select id="month" value={selectedMonth} onChange={(event) => changeSelectedMonth(event.target.value)}>
               {months.map((month) => (
                 <option key={month} value={month}>
                   {month}
@@ -1007,10 +1061,11 @@ function App() {
         {visibleDetailExpenses.length === 0 ? (
           <div className="empty-state">{text.empty}</div>
         ) : (
-          visibleDetailExpenses.map((expense) => {
+          paginatedDetailExpenses.map((expense) => {
             const categoryStyle = getCategoryStyle(expense.category);
             const isEditing = editingExpenseId === expense.id;
             const isConfirmingDelete = deleteTargetId === expense.id;
+            const isSaving = savingExpenseId === expense.id;
 
             return (
               <article className={isEditing ? 'expense-item editing' : 'expense-item'} key={expense.id}>
@@ -1068,11 +1123,11 @@ function App() {
                       />
                     </label>
                     <div className="edit-actions">
-                      <button className="submit-button icon-text-button" type="submit">
+                      <button className="submit-button icon-text-button" type="submit" disabled={isSaving}>
                         <CheckCircle2 size={17} aria-hidden="true" />
-                        <span>{text.save}</span>
+                        <span>{isSaving ? text.saving : text.save}</span>
                       </button>
-                      <button className="ghost-button icon-text-button" type="button" onClick={stopEditing}>
+                      <button className="ghost-button icon-text-button" type="button" onClick={stopEditing} disabled={isSaving}>
                         <X size={17} aria-hidden="true" />
                         <span>{text.cancel}</span>
                       </button>
@@ -1140,6 +1195,24 @@ function App() {
             );
           })
         )}
+
+        {visibleDetailExpenses.length > detailPageSize ? (
+          <nav className="pagination" aria-label={text.details}>
+            <button type="button" onClick={() => setDetailPage((current) => Math.max(1, current - 1))} disabled={detailPage === 1}>
+              {text.previousPage}
+            </button>
+            <span>
+              {detailPage} / {detailPageCount}
+            </span>
+            <button
+              type="button"
+              onClick={() => setDetailPage((current) => Math.min(detailPageCount, current + 1))}
+              disabled={detailPage === detailPageCount}
+            >
+              {text.nextPage}
+            </button>
+          </nav>
+        ) : null}
       </section>
 
       <PieChartBlock modes={chartModes} activeMode={chartMode} onModeChange={setChartMode} />

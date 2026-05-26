@@ -21,16 +21,18 @@ const categories = [
   '\u4ea4\u901a',
   '\u751f\u6d3b',
   '\u7d04\u6703',
+  '\u51fa\u904a',
   '\u623f\u79df',
   '\u5176\u4ed6',
 ];
 
-const categoryColors = ['#17324d', '#2b6f74', '#d75a4a', '#b9852f', '#6d597a', '#5e6470'];
+const categoryColors = ['#17324d', '#2b6f74', '#d75a4a', '#5f7f52', '#b9852f', '#6d597a', '#5e6470'];
 const categoryColorMap = {
   '\u98f2\u98df': { background: '#f5ded6', color: '#8d3226' },
   '\u4ea4\u901a': { background: '#dcebed', color: '#1e5e64' },
   '\u751f\u6d3b': { background: '#e4eadb', color: '#47622d' },
   '\u7d04\u6703': { background: '#f2dfeb', color: '#7a3e68' },
+  '\u51fa\u904a': { background: '#e2edd9', color: '#4f6c35' },
   '\u623f\u79df': { background: '#e1e5ef', color: '#283f67' },
   '\u5176\u4ed6': { background: '#eee7dd', color: '#5e5143' },
 };
@@ -94,6 +96,7 @@ const text = {
   copiedToForm: '\u5df2\u8907\u88fd\u5230\u65b0\u589e\u8868\u55ae',
   delete: '\u522a\u9664',
   confirmDelete: '\u78ba\u8a8d\u522a\u9664',
+  updateNotApplied: '\u7de8\u8f2f\u6c92\u6709\u5beb\u5165\uff1a\u8acb\u78ba\u8a8d Supabase \u5df2\u57f7\u884c update policy migration\u3002',
   signInTitle: '\u767b\u5165\u5171\u540c\u5e33\u672c',
   signInCopy: '\u7528\u5df2\u5efa\u7acb\u7684 email \u548c\u5bc6\u78bc\u767b\u5165\u3002',
   email: 'Email',
@@ -650,9 +653,10 @@ function App() {
     if (!editForm.title.trim() || !amount || amount <= 0) return;
 
     setError('');
+    setSuccessMessage('');
     const selectedPayer = payerOptions.find((option) => option.key === editForm.payer_key) || payerOptions[0];
     const payerMemberId = selectedPayer?.key === 'joint' ? currentMember.id : selectedPayer?.memberId;
-    const { error: updateError } = await supabase
+    const { data: updatedExpense, error: updateError } = await supabase
       .from('expenses')
       .update({
         payer_member_id: payerMemberId,
@@ -663,14 +667,23 @@ function App() {
         category: editForm.category,
         note: editForm.note.trim(),
       })
-      .eq('id', editingExpenseId);
+      .eq('id', editingExpenseId)
+      .eq('couple_id', currentMember.couple_id)
+      .select('id')
+      .maybeSingle();
 
     if (updateError) {
       setError(updateError.message);
       return;
     }
 
+    if (!updatedExpense) {
+      setError(text.updateNotApplied);
+      return;
+    }
+
     setSelectedMonth(monthOf(editForm.date));
+    setSuccessMessage(`${text.save} ${editForm.category} ${money(amount)}`);
     setEditingExpenseId(null);
     await loadLedger(session);
   }
